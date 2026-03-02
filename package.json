@@ -1,0 +1,13 @@
+{
+  "name": "tradieflow",
+  "private": true,
+  "version": "1.0.0",
+  "packageManager": "pnpm@9.12.2",
+  "scripts": {
+    "dev": "docker compose -f infra/docker-compose.yml up -d && pnpm --filter @tradieflow/api dev",
+    "db:migrate": "pnpm --filter @tradieflow/api prisma:migrate",
+    "db:seed": "pnpm --filter @tradieflow/api prisma:seed",
+    "test": "pnpm --filter @tradieflow/api test",
+    "build": "pnpm -r build"
+  }
+}
