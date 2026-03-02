@@ -1,0 +1,8 @@
+{
+  "expo": {
+    "name": "TradieFlow",
+    "slug": "tradieflow",
+    "scheme": "tradieflow",
+    "extra": { "apiUrl": "http://localhost:3001" }
+  }
+}
