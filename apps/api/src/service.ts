@@ -1,9 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import { InvoiceStatus, JobStatus, PaymentMethod, Prisma, QuoteStatus, Role } from '@prisma/client';
+import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { InvoiceStatus, JobStatus, Role } from '@prisma/client';
 import { PrismaService } from './prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { stringify } from 'csv-stringify/sync';
 
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 const formatSeq = (prefix: string, n: number) => `${prefix}-${String(n).padStart(6, '0')}`;
