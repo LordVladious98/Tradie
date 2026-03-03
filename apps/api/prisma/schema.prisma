@@ -1,32 +1,86 @@
-generator client { provider = "prisma-client-js" }
+generator client {
+  provider = "prisma-client-js"
+}
 
-datasource db { provider = "postgresql" url = env("DATABASE_URL") }
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
 
-enum Role { OWNER STAFF }
-enum JobStatus { LEAD QUOTED SCHEDULED IN_PROGRESS COMPLETED INVOICED PAID CANCELLED }
-enum QuoteStatus { DRAFT SENT ACCEPTED DECLINED }
-enum InvoiceStatus { DRAFT SENT OVERDUE PAID VOID }
-enum PaymentMethod { CASH BANK CARD OTHER }
+enum Role {
+  OWNER
+  STAFF
+}
+
+enum JobStatus {
+  LEAD
+  QUOTED
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  INVOICED
+  PAID
+  CANCELLED
+}
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  DECLINED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  OVERDUE
+  PAID
+  VOID
+}
+
+enum PaymentMethod {
+  CASH
+  BANK
+  CARD
+  OTHER
+}
+
+enum SubscriptionPlan {
+  FREE
+  STARTER
+  PRO
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  TRIALING
+}
 
 model Business {
-  id         String   @id @default(cuid())
-  name       String
-  abn        String?
-  email      String?
-  phone      String?
-  address    String?
-  gstEnabled Boolean  @default(true)
-  gstRate    Decimal  @default(0.10)
-  quoteSeq   Int      @default(0)
-  invoiceSeq Int      @default(0)
-  users      User[]
-  customers  Customer[]
-  jobs       Job[]
-  quotes     Quote[]
-  invoices   Invoice[]
-  auditLogs  AuditLog[]
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id            String   @id @default(cuid())
+  name          String
+  abn           String?
+  abnVerified   Boolean  @default(false)
+  abnVerifiedAt DateTime?
+  abnEntityName String?
+  email         String?
+  phone         String?
+  address       String?
+  gstEnabled    Boolean  @default(true)
+  gstRate       Decimal  @default(0.10)
+  quoteSeq      Int      @default(0)
+  invoiceSeq    Int      @default(0)
+  users         User[]
+  customers     Customer[]
+  jobs          Job[]
+  quotes        Quote[]
+  invoices      Invoice[]
+  auditLogs     AuditLog[]
+  subscription  Subscription?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model User {
@@ -40,6 +94,7 @@ model User {
   isActive     Boolean        @default(true)
   pushToken    String?
   refreshTokens RefreshToken[]
+  passwordResets PasswordReset[]
   jobsAssigned Job[]          @relation("AssignedJobs")
   notes        JobNote[]
   photos       JobPhoto[]
@@ -56,6 +111,32 @@ model RefreshToken {
   expiresAt DateTime
   revokedAt DateTime?
   createdAt DateTime @default(now())
+}
+
+model PasswordReset {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  tokenHash String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+model Subscription {
+  id                 String             @id @default(cuid())
+  businessId         String             @unique
+  business           Business           @relation(fields: [businessId], references: [id])
+  plan               SubscriptionPlan   @default(FREE)
+  status             SubscriptionStatus @default(TRIALING)
+  // Payment provider fields — configure with your payment processor
+  externalCustomerId String?
+  externalSubId      String?
+  trialEndsAt        DateTime?
+  currentPeriodEnd   DateTime?
+  cancelAtPeriodEnd  Boolean            @default(false)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
 }
 
 model Customer {

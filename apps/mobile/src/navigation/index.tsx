@@ -4,13 +4,14 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import * as SecureStore from 'expo-secure-store';
 import { colors } from '../theme';
 import {
-  LoginScreen, RegisterScreen,
+  LoginScreen, RegisterScreen, ForgotPasswordScreen,
   DashboardScreen,
   CustomerListScreen, CustomerDetailScreen, CustomerFormScreen,
   JobListScreen, JobDetailScreen, JobFormScreen, AddNoteScreen, AddPhotoScreen,
   InvoiceListScreen, InvoiceDetailScreen, MarkPaidScreen,
   QuoteFormScreen,
   StaffListScreen, StaffDetailScreen, StaffFormScreen,
+  SubscriptionScreen, AuditLogScreen,
   SettingsScreen,
 } from '../screens';
 
@@ -24,7 +25,6 @@ const screenOptions = {
   headerBackTitleVisible: false,
 };
 
-// Customers stack
 function CustomersStack() {
   return (
     <Stack.Navigator screenOptions={screenOptions}>
@@ -35,7 +35,6 @@ function CustomersStack() {
   );
 }
 
-// Jobs stack
 function JobsStack() {
   return (
     <Stack.Navigator screenOptions={screenOptions}>
@@ -49,7 +48,6 @@ function JobsStack() {
   );
 }
 
-// Invoices stack
 function InvoicesStack() {
   return (
     <Stack.Navigator screenOptions={screenOptions}>
@@ -60,13 +58,22 @@ function InvoicesStack() {
   );
 }
 
-// Staff stack
 function StaffStack() {
   return (
     <Stack.Navigator screenOptions={screenOptions}>
       <Stack.Screen name="StaffList" component={StaffListScreen} options={{ title: 'Staff' }} />
       <Stack.Screen name="StaffDetail" component={StaffDetailScreen} options={{ title: 'Staff Member' }} />
       <Stack.Screen name="StaffForm" component={StaffFormScreen} options={({ route }: any) => ({ title: route.params?.staff ? 'Edit Staff' : 'Add Staff' })} />
+    </Stack.Navigator>
+  );
+}
+
+function SettingsStack() {
+  return (
+    <Stack.Navigator screenOptions={screenOptions}>
+      <Stack.Screen name="SettingsHome" component={SettingsScreen} options={{ title: 'Settings' }} />
+      <Stack.Screen name="Subscription" component={SubscriptionScreen} options={{ title: 'Subscription' }} />
+      <Stack.Screen name="AuditLog" component={AuditLogScreen} options={{ title: 'Activity Log' }} />
     </Stack.Navigator>
   );
 }
@@ -87,7 +94,7 @@ function MainTabs() {
       <Tabs.Screen name="Customers" component={CustomersStack} />
       <Tabs.Screen name="Invoices" component={InvoicesStack} />
       <Tabs.Screen name="Staff" component={StaffStack} />
-      <Tabs.Screen name="Settings" component={SettingsScreen} options={{ headerShown: true, ...screenOptions }} />
+      <Tabs.Screen name="Settings" component={SettingsStack} />
     </Tabs.Navigator>
   );
 }
@@ -99,7 +106,7 @@ export function RootNav() {
     SecureStore.getItemAsync('tokens').then((v) => setAuthed(!!v));
   }, []);
 
-  if (authed === null) return null; // splash/loading
+  if (authed === null) return null;
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -108,11 +115,13 @@ export function RootNav() {
           <Stack.Screen name="Main" component={MainTabs} />
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ headerShown: true, ...screenOptions, title: 'Reset Password' }} />
         </>
       ) : (
         <>
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ headerShown: true, ...screenOptions, title: 'Reset Password' }} />
           <Stack.Screen name="Main" component={MainTabs} />
         </>
       )}

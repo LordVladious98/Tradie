@@ -18,7 +18,7 @@ export function LoginScreen({ navigation }: any) {
       await SecureStore.setItemAsync('tokens', JSON.stringify(r.tokens));
       navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
     } catch (e: any) {
-      Alert.alert('Login failed', e?.error?.message || 'Invalid credentials');
+      Alert.alert('Login failed', e?.message || 'Invalid credentials');
     } finally {
       setLoading(false);
     }
@@ -36,6 +36,7 @@ export function LoginScreen({ navigation }: any) {
           <FormField label="Password" value={password} onChangeText={setPassword} placeholder="Enter password" secureTextEntry />
           <Btn title="Sign In" onPress={handleLogin} loading={loading} />
         </View>
+        <Btn title="Forgot Password?" onPress={() => navigation.navigate('ForgotPassword')} variant="ghost" />
         <Btn title="Create Account" onPress={() => navigation.navigate('Register')} variant="ghost" />
       </ScrollView>
     </KeyboardAvoidingView>
@@ -53,13 +54,16 @@ export function RegisterScreen({ navigation }: any) {
       return Alert.alert('Error', 'Please fill in all fields');
     }
     if (form.password.length < 8) return Alert.alert('Error', 'Password must be at least 8 characters');
+    if (!/[A-Z]/.test(form.password) || !/[a-z]/.test(form.password) || !/\d/.test(form.password)) {
+      return Alert.alert('Error', 'Password must include uppercase, lowercase, and a number');
+    }
     setLoading(true);
     try {
       const r: any = await api.post('/auth/register-owner', form);
       await SecureStore.setItemAsync('tokens', JSON.stringify(r.tokens));
       navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
     } catch (e: any) {
-      Alert.alert('Registration failed', e?.error?.message || 'Could not create account');
+      Alert.alert('Registration failed', e?.message || 'Could not create account');
     } finally {
       setLoading(false);
     }
@@ -76,10 +80,59 @@ export function RegisterScreen({ navigation }: any) {
           <FormField label="Business Name" value={form.businessName} onChangeText={update('businessName')} placeholder="e.g. Smith Plumbing Pty Ltd" />
           <FormField label="Your Name" value={form.name} onChangeText={update('name')} placeholder="Full name" />
           <FormField label="Email" value={form.email} onChangeText={update('email')} placeholder="you@example.com" keyboardType="email-address" autoCapitalize="none" />
-          <FormField label="Password" value={form.password} onChangeText={update('password')} placeholder="Min. 8 characters" secureTextEntry />
+          <FormField label="Password" value={form.password} onChangeText={update('password')} placeholder="Min. 8 chars, upper+lower+number" secureTextEntry />
           <Btn title="Create Account" onPress={handleRegister} loading={loading} />
         </View>
         <Btn title="Already have an account? Sign In" onPress={() => navigation.goBack()} variant="ghost" />
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+
+export function ForgotPasswordScreen({ navigation }: any) {
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!email) return Alert.alert('Error', 'Please enter your email address');
+    setLoading(true);
+    try {
+      await api.post('/auth/forgot-password', { email });
+      setSent(true);
+    } catch (e: any) {
+      Alert.alert('Error', e?.message || 'Could not send reset email');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (sent) {
+    return (
+      <View style={[styles.container, styles.content]}>
+        <View style={styles.header}>
+          <Text style={styles.logo}>Check your email</Text>
+          <Text style={[styles.subtitle, { marginTop: spacing.md }]}>
+            If an account exists for {email}, we've sent a password reset link.
+          </Text>
+        </View>
+        <Btn title="Back to Sign In" onPress={() => navigation.goBack()} variant="secondary" />
+      </View>
+    );
+  }
+
+  return (
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <View style={styles.header}>
+          <Text style={styles.logo}>Reset Password</Text>
+          <Text style={styles.subtitle}>Enter your email to receive a reset link</Text>
+        </View>
+        <View style={styles.form}>
+          <FormField label="Email" value={email} onChangeText={setEmail} placeholder="you@example.com" keyboardType="email-address" autoCapitalize="none" />
+          <Btn title="Send Reset Link" onPress={handleSubmit} loading={loading} />
+        </View>
+        <Btn title="Back to Sign In" onPress={() => navigation.goBack()} variant="ghost" />
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -90,6 +143,6 @@ const styles = StyleSheet.create({
   content: { flexGrow: 1, justifyContent: 'center', padding: spacing.xl },
   header: { alignItems: 'center', marginBottom: spacing.xxl },
   logo: { fontSize: 36, fontWeight: '800', color: colors.primary, letterSpacing: -1 },
-  subtitle: { ...typography.body, marginTop: spacing.xs },
+  subtitle: { ...typography.body, marginTop: spacing.xs, textAlign: 'center' },
   form: { marginBottom: spacing.lg },
 });

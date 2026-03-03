@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, FlatList, Image, KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, FlatList, Image, KeyboardAvoidingView, Linking, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import Constants from 'expo-constants';
@@ -12,11 +12,19 @@ const API_BASE = Constants.expoConfig?.extra?.apiUrl || 'http://localhost:3001';
 // Jobs List
 export function JobListScreen({ navigation }: any) {
   const [filter, setFilter] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
   const qc = useQueryClient();
-  const { data, isLoading, refetch, isRefetching } = useQuery({
-    queryKey: ['jobs', filter],
-    queryFn: () => api.get<any[]>(`/jobs${filter ? `?status=${filter}` : ''}`),
+  const { data: resp, isLoading, refetch, isRefetching } = useQuery({
+    queryKey: ['jobs', filter, search],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (filter) params.set('status', filter);
+      if (search) params.set('q', search);
+      const qs = params.toString();
+      return api.get<any>(`/jobs${qs ? `?${qs}` : ''}`);
+    },
   });
+  const data = resp?.data || resp || [];
 
   const filters = [null, 'LEAD', 'SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'INVOICED'];
 
@@ -24,6 +32,15 @@ export function JobListScreen({ navigation }: any) {
 
   return (
     <View style={styles.container}>
+      <View style={styles.searchRow}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search jobs..."
+          placeholderTextColor={colors.gray400}
+          value={search}
+          onChangeText={setSearch}
+        />
+      </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterBar} contentContainerStyle={styles.filterContent}>
         {filters.map((f) => (
           <Pressable
@@ -38,7 +55,7 @@ export function JobListScreen({ navigation }: any) {
         ))}
       </ScrollView>
       <FlatList
-        data={data || []}
+        data={data}
         keyExtractor={(i) => i.id}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />}
         contentContainerStyle={[styles.list, (!data || data.length === 0) && { flex: 1 }]}
@@ -158,6 +175,23 @@ export function JobDetailScreen({ route, navigation }: any) {
         <Btn title="+ Add Note" variant="secondary" size="sm" onPress={() => navigation.navigate('AddNote', { jobId: id })} />
       </View>
 
+      {/* Scheduled dates */}
+      {(data.scheduledStart || data.scheduledEnd) && (
+        <Card style={{ marginTop: spacing.md }}>
+          <Text style={typography.label}>SCHEDULE</Text>
+          {data.scheduledStart && <Text style={typography.body}>Start: {new Date(data.scheduledStart).toLocaleDateString()}</Text>}
+          {data.scheduledEnd && <Text style={typography.body}>End: {new Date(data.scheduledEnd).toLocaleDateString()}</Text>}
+        </Card>
+      )}
+
+      {/* Assigned user */}
+      {data.assignedUser && (
+        <Card style={{ marginTop: spacing.md }}>
+          <Text style={typography.label}>ASSIGNED TO</Text>
+          <Text style={typography.body}>{data.assignedUser.name}</Text>
+        </Card>
+      )}
+
       {/* Quotes */}
       <View style={{ marginTop: spacing.xl }}>
         <SectionHeader title={`Quotes (${data.quotes?.length || 0})`} />
@@ -168,6 +202,22 @@ export function JobDetailScreen({ route, navigation }: any) {
               <StatusBadge status={q.status} />
             </View>
             <Text style={typography.h3}>${Number(q.total).toFixed(2)}</Text>
+            <View style={{ flexDirection: 'row', marginTop: spacing.sm, gap: spacing.sm }}>
+              <View style={{ flex: 1 }}>
+                <Btn title="PDF" variant="secondary" size="sm" onPress={() => Linking.openURL(`${API_BASE}/quotes/${q.id}/pdf`)} />
+              </View>
+              {q.status === 'ACCEPTED' && (
+                <View style={{ flex: 1 }}>
+                  <Btn title="To Invoice" size="sm" onPress={async () => {
+                    try {
+                      await api.post(`/invoices/from-quote/${q.id}`);
+                      qc.invalidateQueries({ queryKey: ['job', id] });
+                      Alert.alert('Done', 'Invoice created from quote');
+                    } catch (e: any) { Alert.alert('Error', e?.message || 'Could not convert'); }
+                  }} />
+                </View>
+              )}
+            </View>
           </Card>
         ))}
         <Btn title="+ Create Quote" variant="secondary" size="sm" onPress={() => navigation.navigate('QuoteForm', { jobId: id })} />
@@ -235,6 +285,8 @@ export function JobFormScreen({ route, navigation }: any) {
     description: existing?.description || '',
     siteAddress: existing?.siteAddress || '',
     customerId: existing?.customerId || '',
+    scheduledStart: existing?.scheduledStart ? existing.scheduledStart.slice(0, 10) : '',
+    scheduledEnd: existing?.scheduledEnd ? existing.scheduledEnd.slice(0, 10) : '',
   });
   const [loading, setLoading] = useState(false);
   const qc = useQueryClient();
@@ -273,6 +325,8 @@ export function JobFormScreen({ route, navigation }: any) {
         <FormField label="Title *" value={form.title} onChangeText={update('title')} placeholder="e.g. Fix leaking tap" />
         <FormField label="Description" value={form.description} onChangeText={update('description')} placeholder="Details..." multiline />
         <FormField label="Site Address" value={form.siteAddress} onChangeText={update('siteAddress')} placeholder="Job location" />
+        <FormField label="Scheduled Start (YYYY-MM-DD)" value={form.scheduledStart} onChangeText={update('scheduledStart')} placeholder="e.g. 2026-03-15" />
+        <FormField label="Scheduled End (YYYY-MM-DD)" value={form.scheduledEnd} onChangeText={update('scheduledEnd')} placeholder="e.g. 2026-03-16" />
 
         {!existing && (
           <>
@@ -418,5 +472,19 @@ const styles = StyleSheet.create({
     height: 200,
     borderRadius: borderRadius.md,
     marginBottom: spacing.lg,
+  },
+  searchRow: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+  },
+  searchInput: {
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray200,
+    borderRadius: borderRadius.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    fontSize: 14,
+    color: colors.gray900,
   },
 });
