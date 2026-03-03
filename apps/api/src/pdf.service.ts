@@ -1,0 +1,125 @@
+import { Injectable } from '@nestjs/common';
+import * as PDFDocument from 'pdfkit';
+
+interface LineItem {
+  description: string;
+  quantity: string | number;
+  unitPrice: string | number;
+  lineTotal: string | number;
+}
+
+interface DocumentData {
+  documentNumber: string;
+  type: 'Quote' | 'Invoice';
+  status: string;
+  business: {
+    name: string;
+    abn?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    address?: string | null;
+  };
+  customer: {
+    name: string;
+    email?: string | null;
+    phone?: string | null;
+    address?: string | null;
+  };
+  items: LineItem[];
+  subtotal: number;
+  gstAmount: number;
+  discountAmount: number;
+  total: number;
+  dueDate?: string | null;
+  createdAt: string;
+}
+
+@Injectable()
+export class PdfService {
+  generate(data: DocumentData): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      const doc = new PDFDocument({ size: 'A4', margin: 50 });
+      const chunks: Buffer[] = [];
+
+      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+
+      // Header
+      doc.fontSize(24).font('Helvetica-Bold').text(data.business.name, 50, 50);
+      doc.fontSize(10).font('Helvetica').fillColor('#666666');
+      let yPos = 80;
+      if (data.business.abn) { doc.text(`ABN: ${data.business.abn}`, 50, yPos); yPos += 14; }
+      if (data.business.email) { doc.text(data.business.email, 50, yPos); yPos += 14; }
+      if (data.business.phone) { doc.text(data.business.phone, 50, yPos); yPos += 14; }
+      if (data.business.address) { doc.text(data.business.address, 50, yPos); yPos += 14; }
+
+      // Document title
+      doc.fontSize(20).font('Helvetica-Bold').fillColor('#2563EB')
+        .text(data.type.toUpperCase(), 400, 50, { align: 'right' });
+      doc.fontSize(12).font('Helvetica').fillColor('#333333')
+        .text(data.documentNumber, 400, 75, { align: 'right' });
+      doc.fontSize(10).fillColor('#666666')
+        .text(`Date: ${new Date(data.createdAt).toLocaleDateString()}`, 400, 93, { align: 'right' })
+        .text(`Status: ${data.status}`, 400, 107, { align: 'right' });
+      if (data.dueDate) {
+        doc.text(`Due: ${new Date(data.dueDate).toLocaleDateString()}`, 400, 121, { align: 'right' });
+      }
+
+      // Bill To
+      yPos = Math.max(yPos, 135) + 20;
+      doc.fontSize(10).font('Helvetica-Bold').fillColor('#333333').text('BILL TO', 50, yPos);
+      yPos += 16;
+      doc.font('Helvetica').text(data.customer.name, 50, yPos); yPos += 14;
+      if (data.customer.email) { doc.text(data.customer.email, 50, yPos); yPos += 14; }
+      if (data.customer.phone) { doc.text(data.customer.phone, 50, yPos); yPos += 14; }
+      if (data.customer.address) { doc.text(data.customer.address, 50, yPos); yPos += 14; }
+
+      // Table header
+      yPos += 20;
+      doc.rect(50, yPos, 495, 22).fill('#f3f4f6');
+      doc.fontSize(9).font('Helvetica-Bold').fillColor('#374151');
+      doc.text('Description', 55, yPos + 6, { width: 240 });
+      doc.text('Qty', 300, yPos + 6, { width: 50, align: 'right' });
+      doc.text('Unit Price', 355, yPos + 6, { width: 80, align: 'right' });
+      doc.text('Total', 440, yPos + 6, { width: 100, align: 'right' });
+
+      // Table rows
+      yPos += 22;
+      doc.font('Helvetica').fillColor('#333333');
+      for (const item of data.items) {
+        if (yPos > 700) { doc.addPage(); yPos = 50; }
+        doc.fontSize(9);
+        doc.text(item.description, 55, yPos + 5, { width: 240 });
+        doc.text(String(Number(item.quantity)), 300, yPos + 5, { width: 50, align: 'right' });
+        doc.text(`$${Number(item.unitPrice).toFixed(2)}`, 355, yPos + 5, { width: 80, align: 'right' });
+        doc.text(`$${Number(item.lineTotal).toFixed(2)}`, 440, yPos + 5, { width: 100, align: 'right' });
+        yPos += 22;
+        doc.moveTo(50, yPos).lineTo(545, yPos).strokeColor('#e5e7eb').lineWidth(0.5).stroke();
+      }
+
+      // Totals
+      yPos += 15;
+      const totalsX = 380;
+      doc.fontSize(10).font('Helvetica');
+      doc.text('Subtotal:', totalsX, yPos).text(`$${data.subtotal.toFixed(2)}`, 440, yPos, { width: 100, align: 'right' });
+      yPos += 18;
+      doc.text('GST:', totalsX, yPos).text(`$${data.gstAmount.toFixed(2)}`, 440, yPos, { width: 100, align: 'right' });
+      yPos += 18;
+      if (data.discountAmount > 0) {
+        doc.text('Discount:', totalsX, yPos).text(`-$${data.discountAmount.toFixed(2)}`, 440, yPos, { width: 100, align: 'right' });
+        yPos += 18;
+      }
+      doc.moveTo(totalsX, yPos).lineTo(545, yPos).strokeColor('#333333').lineWidth(1).stroke();
+      yPos += 8;
+      doc.fontSize(14).font('Helvetica-Bold');
+      doc.text('Total:', totalsX, yPos).text(`$${data.total.toFixed(2)}`, 440, yPos, { width: 100, align: 'right' });
+
+      // Footer
+      doc.fontSize(8).font('Helvetica').fillColor('#999999')
+        .text('Generated by TradieFlow', 50, 760, { align: 'center' });
+
+      doc.end();
+    });
+  }
+}

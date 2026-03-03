@@ -7,8 +7,10 @@ import {
   LoginScreen, RegisterScreen,
   DashboardScreen,
   CustomerListScreen, CustomerDetailScreen, CustomerFormScreen,
-  JobListScreen, JobDetailScreen, JobFormScreen, AddNoteScreen,
+  JobListScreen, JobDetailScreen, JobFormScreen, AddNoteScreen, AddPhotoScreen,
   InvoiceListScreen, InvoiceDetailScreen, MarkPaidScreen,
+  QuoteFormScreen,
+  StaffListScreen, StaffDetailScreen, StaffFormScreen,
   SettingsScreen,
 } from '../screens';
 
@@ -41,6 +43,8 @@ function JobsStack() {
       <Stack.Screen name="JobDetail" component={JobDetailScreen} options={{ title: 'Job Details' }} />
       <Stack.Screen name="JobForm" component={JobFormScreen} options={({ route }: any) => ({ title: route.params?.job ? 'Edit Job' : 'New Job' })} />
       <Stack.Screen name="AddNote" component={AddNoteScreen} options={{ title: 'Add Note' }} />
+      <Stack.Screen name="AddPhoto" component={AddPhotoScreen} options={{ title: 'Add Photo' }} />
+      <Stack.Screen name="QuoteForm" component={QuoteFormScreen} options={{ title: 'Create Quote' }} />
     </Stack.Navigator>
   );
 }
@@ -52,6 +56,17 @@ function InvoicesStack() {
       <Stack.Screen name="InvoiceList" component={InvoiceListScreen} options={{ title: 'Invoices' }} />
       <Stack.Screen name="InvoiceDetail" component={InvoiceDetailScreen} options={{ title: 'Invoice' }} />
       <Stack.Screen name="MarkPaid" component={MarkPaidScreen} options={{ title: 'Record Payment' }} />
+    </Stack.Navigator>
+  );
+}
+
+// Staff stack
+function StaffStack() {
+  return (
+    <Stack.Navigator screenOptions={screenOptions}>
+      <Stack.Screen name="StaffList" component={StaffListScreen} options={{ title: 'Staff' }} />
+      <Stack.Screen name="StaffDetail" component={StaffDetailScreen} options={{ title: 'Staff Member' }} />
+      <Stack.Screen name="StaffForm" component={StaffFormScreen} options={({ route }: any) => ({ title: route.params?.staff ? 'Edit Staff' : 'Add Staff' })} />
     </Stack.Navigator>
   );
 }
@@ -71,6 +86,7 @@ function MainTabs() {
       <Tabs.Screen name="Jobs" component={JobsStack} />
       <Tabs.Screen name="Customers" component={CustomersStack} />
       <Tabs.Screen name="Invoices" component={InvoicesStack} />
+      <Tabs.Screen name="Staff" component={StaffStack} />
       <Tabs.Screen name="Settings" component={SettingsScreen} options={{ headerShown: true, ...screenOptions }} />
     </Tabs.Navigator>
   );

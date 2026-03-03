@@ -2,7 +2,44 @@
   "expo": {
     "name": "TradieFlow",
     "slug": "tradieflow",
+    "version": "1.0.0",
     "scheme": "tradieflow",
-    "extra": { "apiUrl": "http://localhost:3001" }
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#2563EB",
+      "resizeMode": "contain"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "app.tradieflow.mobile",
+      "infoPlist": {
+        "NSCameraUsageDescription": "TradieFlow needs camera access to take job site photos.",
+        "NSPhotoLibraryUsageDescription": "TradieFlow needs photo library access to upload job site photos."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#2563EB"
+      },
+      "package": "app.tradieflow.mobile",
+      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE"]
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "sounds": []
+        }
+      ],
+      "expo-image-picker",
+      "expo-secure-store"
+    ],
+    "extra": {
+      "apiUrl": "http://localhost:3001",
+      "eas": {
+        "projectId": ""
+      }
+    }
   }
 }

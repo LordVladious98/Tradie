@@ -38,6 +38,7 @@ model User {
   passwordHash String
   role         Role
   isActive     Boolean        @default(true)
+  pushToken    String?
   refreshTokens RefreshToken[]
   jobsAssigned Job[]          @relation("AssignedJobs")
   notes        JobNote[]

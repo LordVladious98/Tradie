@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
-import { Alert, FlatList, KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, FlatList, Image, KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import * as ImagePicker from 'expo-image-picker';
+import Constants from 'expo-constants';
 import { api } from '../api/client';
 import { Card, LoadingView, EmptyView, StatusBadge, Btn, FormField, SectionHeader } from '../components';
 import { colors, spacing, borderRadius, typography } from '../theme';
+
+const API_BASE = Constants.expoConfig?.extra?.apiUrl || 'http://localhost:3001';
 
 // Jobs List
 export function JobListScreen({ navigation }: any) {
@@ -129,6 +133,19 @@ export function JobDetailScreen({ route, navigation }: any) {
         </View>
       )}
 
+      {/* Photos */}
+      <View style={{ marginTop: spacing.xl }}>
+        <SectionHeader title={`Photos (${data.photos?.length || 0})`} />
+        {data.photos?.length > 0 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: spacing.sm }}>
+            {data.photos.map((p: any) => (
+              <Image key={p.id} source={{ uri: `${API_BASE}${p.url}` }} style={styles.photo} />
+            ))}
+          </ScrollView>
+        )}
+        <Btn title="+ Add Photo" variant="secondary" size="sm" onPress={() => navigation.navigate('AddPhoto', { jobId: id })} />
+      </View>
+
       {/* Notes */}
       <View style={{ marginTop: spacing.xl }}>
         <SectionHeader title={`Notes (${data.notes?.length || 0})`} />
@@ -142,36 +159,33 @@ export function JobDetailScreen({ route, navigation }: any) {
       </View>
 
       {/* Quotes */}
-      {data.quotes?.length > 0 && (
-        <View style={{ marginTop: spacing.xl }}>
-          <SectionHeader title={`Quotes (${data.quotes.length})`} />
-          {data.quotes.map((q: any) => (
-            <Card key={q.id}>
-              <View style={styles.jobHeader}>
-                <Text style={typography.body}>{q.quoteNumber}</Text>
-                <StatusBadge status={q.status} />
-              </View>
-              <Text style={typography.h3}>${Number(q.total).toFixed(2)}</Text>
-            </Card>
-          ))}
-        </View>
-      )}
+      <View style={{ marginTop: spacing.xl }}>
+        <SectionHeader title={`Quotes (${data.quotes?.length || 0})`} />
+        {data.quotes?.map((q: any) => (
+          <Card key={q.id}>
+            <View style={styles.jobHeader}>
+              <Text style={typography.body}>{q.quoteNumber}</Text>
+              <StatusBadge status={q.status} />
+            </View>
+            <Text style={typography.h3}>${Number(q.total).toFixed(2)}</Text>
+          </Card>
+        ))}
+        <Btn title="+ Create Quote" variant="secondary" size="sm" onPress={() => navigation.navigate('QuoteForm', { jobId: id })} />
+      </View>
 
       {/* Invoices */}
-      {data.invoices?.length > 0 && (
-        <View style={{ marginTop: spacing.xl }}>
-          <SectionHeader title={`Invoices (${data.invoices.length})`} />
-          {data.invoices.map((inv: any) => (
-            <Card key={inv.id}>
-              <View style={styles.jobHeader}>
-                <Text style={typography.body}>{inv.invoiceNumber}</Text>
-                <StatusBadge status={inv.status} />
-              </View>
-              <Text style={typography.h3}>${Number(inv.total).toFixed(2)}</Text>
-            </Card>
-          ))}
-        </View>
-      )}
+      <View style={{ marginTop: spacing.xl }}>
+        <SectionHeader title={`Invoices (${data.invoices?.length || 0})`} />
+        {data.invoices?.map((inv: any) => (
+          <Card key={inv.id}>
+            <View style={styles.jobHeader}>
+              <Text style={typography.body}>{inv.invoiceNumber}</Text>
+              <StatusBadge status={inv.status} />
+            </View>
+            <Text style={typography.h3}>${Number(inv.total).toFixed(2)}</Text>
+          </Card>
+        ))}
+      </View>
 
       <View style={{ marginTop: spacing.lg }}>
         <Btn title="Edit Job" variant="secondary" onPress={() => navigation.navigate('JobForm', { job: data })} />
@@ -286,6 +300,78 @@ export function JobFormScreen({ route, navigation }: any) {
   );
 }
 
+// Add Photo
+export function AddPhotoScreen({ route, navigation }: any) {
+  const { jobId } = route.params;
+  const [caption, setCaption] = useState('');
+  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const qc = useQueryClient();
+
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') return Alert.alert('Permission needed', 'Camera roll access is required to upload photos.');
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
+    if (!result.canceled && result.assets[0]) setImageUri(result.assets[0].uri);
+  };
+
+  const takePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') return Alert.alert('Permission needed', 'Camera access is required to take photos.');
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
+    if (!result.canceled && result.assets[0]) setImageUri(result.assets[0].uri);
+  };
+
+  const handleUpload = async () => {
+    if (!imageUri) return Alert.alert('Error', 'Please select a photo first');
+    setLoading(true);
+    try {
+      const formData = new FormData();
+      const filename = imageUri.split('/').pop() || 'photo.jpg';
+      formData.append('file', { uri: imageUri, name: filename, type: 'image/jpeg' } as any);
+      if (caption) formData.append('caption', caption);
+
+      const tokens = await (await import('expo-secure-store')).getItemAsync('tokens');
+      const accessToken = tokens ? JSON.parse(tokens).accessToken : '';
+
+      await fetch(`${API_BASE}/jobs/${jobId}/photos`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}` },
+        body: formData,
+      });
+
+      qc.invalidateQueries({ queryKey: ['job', jobId] });
+      navigation.goBack();
+    } catch (e: any) {
+      Alert.alert('Error', 'Could not upload photo');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView contentContainerStyle={styles.formContent} keyboardShouldPersistTaps="handled">
+        <View style={styles.photoButtons}>
+          <View style={{ flex: 1, marginRight: spacing.sm }}>
+            <Btn title="Take Photo" variant="secondary" onPress={takePhoto} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Btn title="Choose Photo" variant="secondary" onPress={pickImage} />
+          </View>
+        </View>
+
+        {imageUri && (
+          <Image source={{ uri: imageUri }} style={styles.photoPreview} resizeMode="cover" />
+        )}
+
+        <FormField label="Caption (optional)" value={caption} onChangeText={setCaption} placeholder="Describe the photo..." />
+        <Btn title="Upload Photo" onPress={handleUpload} loading={loading} disabled={!imageUri} />
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.gray50 },
   filterBar: { maxHeight: 50 },
@@ -316,5 +402,21 @@ const styles = StyleSheet.create({
   customerOptionActive: {
     borderColor: colors.primary,
     backgroundColor: colors.primaryLight,
+  },
+  photo: {
+    width: 120,
+    height: 120,
+    borderRadius: borderRadius.sm,
+    marginRight: spacing.sm,
+  },
+  photoButtons: {
+    flexDirection: 'row',
+    marginBottom: spacing.lg,
+  },
+  photoPreview: {
+    width: '100%',
+    height: 200,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.lg,
   },
 });

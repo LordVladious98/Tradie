@@ -6,6 +6,9 @@ import { diskStorage } from 'multer';
 import { stringify } from 'csv-stringify/sync';
 import { AppService } from './service';
 import { PrismaService } from './prisma.service';
+import { PdfService } from './pdf.service';
+import { EmailService } from './email.service';
+import { NotificationService } from './notification.service';
 import { AuthGuard, Roles, RolesGuard } from './auth';
 import {
   RegisterOwnerDto, LoginDto, CreateStaffDto, UpdateStaffDto,
@@ -17,7 +20,7 @@ import * as bcrypt from 'bcrypt';
 
 @Controller()
 export class AppController {
-  constructor(private svc: AppService, private prisma: PrismaService) {}
+  constructor(private svc: AppService, private prisma: PrismaService, private pdf: PdfService, private email: EmailService, private notifications: NotificationService) {}
 
   // Auth
   @Post('auth/register-owner')
@@ -47,6 +50,13 @@ export class AppController {
       where: { id: req.user.sub },
       select: { id: true, name: true, email: true, role: true, businessId: true },
     });
+  }
+
+  @Post('me/push-token')
+  @UseGuards(AuthGuard)
+  async registerPushToken(@Req() req: any, @Body('pushToken') pushToken: string) {
+    await this.notifications.registerToken(req.user.sub, pushToken);
+    return { ok: true };
   }
 
   // Staff
@@ -407,6 +417,136 @@ export class AppController {
   @Roles(Role.OWNER)
   voidInvoice(@Req() req: any, @Param('id') id: string) {
     return this.prisma.invoice.update({ where: { id, businessId: req.user.businessId }, data: { status: InvoiceStatus.VOID } });
+  }
+
+  // PDF generation
+  @Get('quotes/:id/pdf')
+  @UseGuards(AuthGuard)
+  async quotePdf(@Req() req: any, @Param('id') id: string, @Res() res: Response) {
+    const quote = await this.prisma.quote.findFirstOrThrow({
+      where: { id, businessId: req.user.businessId },
+      include: { items: true, job: { include: { customer: true } } },
+    });
+    const biz = await this.prisma.business.findUniqueOrThrow({ where: { id: req.user.businessId } });
+    const buf = await this.pdf.generate({
+      documentNumber: quote.quoteNumber,
+      type: 'Quote',
+      status: quote.status,
+      business: biz,
+      customer: quote.job.customer,
+      items: quote.items,
+      subtotal: Number(quote.subtotal),
+      gstAmount: Number(quote.gstAmount),
+      discountAmount: Number(quote.discountAmount),
+      total: Number(quote.total),
+      createdAt: quote.createdAt.toISOString(),
+    });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${quote.quoteNumber}.pdf"`);
+    res.send(buf);
+  }
+
+  @Get('invoices/:id/pdf')
+  @UseGuards(AuthGuard)
+  async invoicePdf(@Req() req: any, @Param('id') id: string, @Res() res: Response) {
+    const inv = await this.prisma.invoice.findFirstOrThrow({
+      where: { id, businessId: req.user.businessId },
+      include: { items: true, job: { include: { customer: true } } },
+    });
+    const biz = await this.prisma.business.findUniqueOrThrow({ where: { id: req.user.businessId } });
+    const buf = await this.pdf.generate({
+      documentNumber: inv.invoiceNumber,
+      type: 'Invoice',
+      status: inv.status,
+      business: biz,
+      customer: inv.job.customer,
+      items: inv.items,
+      subtotal: Number(inv.subtotal),
+      gstAmount: Number(inv.gstAmount),
+      discountAmount: Number(inv.discountAmount),
+      total: Number(inv.total),
+      dueDate: inv.dueDate?.toISOString(),
+      createdAt: inv.createdAt.toISOString(),
+    });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${inv.invoiceNumber}.pdf"`);
+    res.send(buf);
+  }
+
+  // Email delivery
+  @Post('quotes/:id/email')
+  @UseGuards(AuthGuard)
+  async emailQuote(@Req() req: any, @Param('id') id: string) {
+    const quote = await this.prisma.quote.findFirstOrThrow({
+      where: { id, businessId: req.user.businessId },
+      include: { items: true, job: { include: { customer: true } } },
+    });
+    if (!quote.job.customer.email) {
+      return { sent: false, reason: 'Customer has no email address' };
+    }
+    const biz = await this.prisma.business.findUniqueOrThrow({ where: { id: req.user.businessId } });
+    const buf = await this.pdf.generate({
+      documentNumber: quote.quoteNumber,
+      type: 'Quote',
+      status: quote.status,
+      business: biz,
+      customer: quote.job.customer,
+      items: quote.items,
+      subtotal: Number(quote.subtotal),
+      gstAmount: Number(quote.gstAmount),
+      discountAmount: Number(quote.discountAmount),
+      total: Number(quote.total),
+      createdAt: quote.createdAt.toISOString(),
+    });
+    const result = await this.email.sendDocument({
+      to: quote.job.customer.email,
+      businessName: biz.name,
+      documentType: 'Quote',
+      documentNumber: quote.quoteNumber,
+      pdfBuffer: buf,
+    });
+    if (result.sent) {
+      await this.prisma.quote.update({ where: { id }, data: { status: QuoteStatus.SENT } });
+    }
+    return result;
+  }
+
+  @Post('invoices/:id/email')
+  @UseGuards(AuthGuard)
+  async emailInvoice(@Req() req: any, @Param('id') id: string) {
+    const inv = await this.prisma.invoice.findFirstOrThrow({
+      where: { id, businessId: req.user.businessId },
+      include: { items: true, job: { include: { customer: true } } },
+    });
+    if (!inv.job.customer.email) {
+      return { sent: false, reason: 'Customer has no email address' };
+    }
+    const biz = await this.prisma.business.findUniqueOrThrow({ where: { id: req.user.businessId } });
+    const buf = await this.pdf.generate({
+      documentNumber: inv.invoiceNumber,
+      type: 'Invoice',
+      status: inv.status,
+      business: biz,
+      customer: inv.job.customer,
+      items: inv.items,
+      subtotal: Number(inv.subtotal),
+      gstAmount: Number(inv.gstAmount),
+      discountAmount: Number(inv.discountAmount),
+      total: Number(inv.total),
+      dueDate: inv.dueDate?.toISOString(),
+      createdAt: inv.createdAt.toISOString(),
+    });
+    const result = await this.email.sendDocument({
+      to: inv.job.customer.email,
+      businessName: biz.name,
+      documentType: 'Invoice',
+      documentNumber: inv.invoiceNumber,
+      pdfBuffer: buf,
+    });
+    if (result.sent) {
+      await this.prisma.invoice.update({ where: { id }, data: { status: InvoiceStatus.SENT } });
+    }
+    return result;
   }
 
   // Reports
