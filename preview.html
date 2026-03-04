@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TradieFlow - Interactive Preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --success: #16a34a;
+    --warning: #ea580c;
+    --danger: #dc2626;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --gray-900: #111827;
+    --radius: 12px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06);
+    --shadow-lg: 0 10px 15px rgba(0,0,0,0.1), 0 4px 6px rgba(0,0,0,0.05);
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #0f172a;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+  }
+  .phone-frame {
+    width: 390px;
+    height: 844px;
+    background: var(--gray-50);
+    border-radius: 40px;
+    overflow: hidden;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.5), inset 0 0 0 3px #333;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  .notch {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 160px;
+    height: 34px;
+    background: #000;
+    border-radius: 0 0 20px 20px;
+    z-index: 100;
+  }
+  .status-bar {
+    background: var(--primary);
+    color: white;
+    padding: 12px 24px 0;
+    height: 50px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .header {
+    background: var(--primary);
+    color: white;
+    padding: 16px 20px;
+    font-size: 20px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .header .subtitle {
+    font-size: 13px;
+    font-weight: 400;
+    opacity: 0.85;
+  }
+  .screen-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    scrollbar-width: none;
+  }
+  .screen-content::-webkit-scrollbar { display: none; }
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* Bottom Tabs */
+  .tab-bar {
+    display: flex;
+    background: white;
+    border-top: 1px solid var(--gray-200);
+    padding: 8px 0 28px;
+  }
+  .tab-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 6px;
+    cursor: pointer;
+    color: var(--gray-400);
+    font-size: 10px;
+    font-weight: 500;
+    transition: color 0.2s;
+    border: none;
+    background: none;
+  }
+  .tab-item.active { color: var(--primary); }
+  .tab-item svg { width: 24px; height: 24px; }
+
+  /* Login Screen */
+  .login-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 40px 24px;
+  }
+  .login-logo {
+    width: 80px;
+    height: 80px;
+    background: var(--primary);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow-lg);
+  }
+  .login-logo svg { width: 44px; height: 44px; fill: white; }
+  .login-title {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--gray-900);
+    margin-bottom: 8px;
+  }
+  .login-subtitle {
+    font-size: 14px;
+    color: var(--gray-500);
+    margin-bottom: 32px;
+  }
+  .form-group {
+    width: 100%;
+    margin-bottom: 16px;
+  }
+  .form-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gray-700);
+    margin-bottom: 6px;
+  }
+  .form-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1.5px solid var(--gray-300);
+    border-radius: 10px;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+    background: white;
+  }
+  .form-input:focus { border-color: var(--primary); }
+  .btn {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-primary {
+    background: var(--primary);
+    color: white;
+  }
+  .btn-primary:hover { background: var(--primary-dark); }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-outline {
+    background: transparent;
+    color: var(--primary);
+    border: 1.5px solid var(--primary);
+    margin-top: 12px;
+  }
+  .btn-sm {
+    width: auto;
+    padding: 8px 16px;
+    font-size: 13px;
+    border-radius: 8px;
+  }
+  .demo-hint {
+    margin-top: 20px;
+    font-size: 12px;
+    color: var(--gray-400);
+    text-align: center;
+  }
+
+  /* Dashboard */
+  .welcome-card {
+    background: linear-gradient(135deg, var(--primary), #7c3aed);
+    color: white;
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .welcome-card h2 { font-size: 22px; margin-bottom: 4px; }
+  .welcome-card p { opacity: 0.85; font-size: 14px; }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    background: white;
+    border-radius: var(--radius);
+    padding: 16px;
+    box-shadow: var(--shadow);
+  }
+  .stat-card .stat-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+    font-size: 18px;
+  }
+  .stat-card .stat-value {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--gray-900);
+  }
+  .stat-card .stat-label {
+    font-size: 12px;
+    color: var(--gray-500);
+    margin-top: 2px;
+  }
+  .section-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--gray-800);
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .section-title a {
+    font-size: 13px;
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  /* Cards / List Items */
+  .card {
+    background: white;
+    border-radius: var(--radius);
+    padding: 16px;
+    box-shadow: var(--shadow);
+    margin-bottom: 12px;
+    cursor: pointer;
+    transition: box-shadow 0.2s, transform 0.15s;
+  }
+  .card:hover { box-shadow: var(--shadow-md); }
+  .card:active { transform: scale(0.985); }
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+  }
+  .card-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--gray-900);
+  }
+  .card-subtitle {
+    font-size: 13px;
+    color: var(--gray-500);
+    margin-top: 2px;
+  }
+  .badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  .badge-blue { background: #dbeafe; color: #1d4ed8; }
+  .badge-green { background: #dcfce7; color: #15803d; }
+  .badge-orange { background: #ffedd5; color: #c2410c; }
+  .badge-red { background: #fee2e2; color: #b91c1c; }
+  .badge-purple { background: #f3e8ff; color: #7e22ce; }
+  .badge-gray { background: #f3f4f6; color: #4b5563; }
+  .card-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    color: var(--gray-600);
+    margin-top: 6px;
+  }
+  .card-amount {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--gray-900);
+  }
+  .avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 15px;
+    color: white;
+    flex-shrink: 0;
+  }
+  .customer-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  /* Search Bar */
+  .search-bar {
+    position: relative;
+    margin-bottom: 16px;
+  }
+  .search-bar input {
+    width: 100%;
+    padding: 10px 16px 10px 40px;
+    border: 1.5px solid var(--gray-200);
+    border-radius: 10px;
+    font-size: 14px;
+    background: white;
+    outline: none;
+  }
+  .search-bar input:focus { border-color: var(--primary); }
+  .search-bar svg {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 18px;
+    height: 18px;
+    color: var(--gray-400);
+  }
+
+  /* Filter Chips */
+  .filter-row {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    margin-bottom: 16px;
+    scrollbar-width: none;
+  }
+  .filter-row::-webkit-scrollbar { display: none; }
+  .chip {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    border: 1.5px solid var(--gray-200);
+    background: white;
+    color: var(--gray-600);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+  }
+  .chip.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+  }
+
+  /* Detail / Modal */
+  .detail-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--gray-50);
+    z-index: 50;
+    display: none;
+    flex-direction: column;
+  }
+  .detail-overlay.active { display: flex; }
+  .detail-header {
+    background: var(--primary);
+    color: white;
+    padding: 50px 20px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .detail-header .back-btn {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 4px;
+  }
+  .detail-header .back-btn svg { width: 24px; height: 24px; }
+  .detail-header h2 { font-size: 18px; font-weight: 700; }
+  .detail-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    scrollbar-width: none;
+  }
+  .detail-body::-webkit-scrollbar { display: none; }
+  .detail-section {
+    margin-bottom: 20px;
+  }
+  .detail-section h3 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+  }
+  .detail-field {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--gray-100);
+    font-size: 14px;
+  }
+  .detail-field .label { color: var(--gray-500); }
+  .detail-field .value { font-weight: 600; color: var(--gray-900); }
+  .line-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--gray-100);
+    font-size: 14px;
+  }
+  .line-item .li-desc { color: var(--gray-700); }
+  .line-item .li-qty { color: var(--gray-500); font-size: 12px; }
+  .line-item .li-total { font-weight: 600; color: var(--gray-900); }
+  .total-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    font-size: 14px;
+  }
+  .total-row.grand {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--gray-900);
+    border-top: 2px solid var(--gray-300);
+    padding-top: 12px;
+  }
+  .note-card {
+    background: #fffbeb;
+    border-left: 3px solid #f59e0b;
+    padding: 10px 14px;
+    border-radius: 0 8px 8px 0;
+    margin-bottom: 8px;
+    font-size: 13px;
+    color: var(--gray-700);
+  }
+  .note-card .note-meta {
+    font-size: 11px;
+    color: var(--gray-400);
+    margin-top: 4px;
+  }
+  .status-timeline {
+    position: relative;
+    padding-left: 24px;
+  }
+  .status-timeline::before {
+    content: '';
+    position: absolute;
+    left: 7px;
+    top: 4px;
+    bottom: 4px;
+    width: 2px;
+    background: var(--gray-200);
+  }
+  .timeline-item {
+    position: relative;
+    padding-bottom: 16px;
+    font-size: 13px;
+  }
+  .timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -20px;
+    top: 4px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--gray-300);
+    border: 2px solid white;
+  }
+  .timeline-item.done::before { background: var(--success); }
+  .timeline-item.current::before { background: var(--primary); box-shadow: 0 0 0 4px #dbeafe; }
+  .timeline-item .tl-label { font-weight: 600; color: var(--gray-800); }
+  .timeline-item .tl-date { font-size: 11px; color: var(--gray-400); }
+
+  /* Settings */
+  .settings-group {
+    background: white;
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    margin-bottom: 16px;
+  }
+  .settings-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--gray-100);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .settings-item:last-child { border-bottom: none; }
+  .settings-item:hover { background: var(--gray-50); }
+  .settings-item .si-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .settings-item .si-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+  .settings-item .si-label { font-size: 15px; color: var(--gray-800); }
+  .settings-item .si-arrow { color: var(--gray-400); font-size: 14px; }
+  .settings-item.danger .si-label { color: var(--danger); }
+
+  /* FAB */
+  .fab {
+    position: absolute;
+    bottom: 100px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    box-shadow: var(--shadow-lg);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    transition: transform 0.2s;
+    z-index: 40;
+  }
+  .fab:hover { transform: scale(1.05); }
+  .fab:active { transform: scale(0.95); }
+
+  /* Toasts */
+  .toast {
+    position: absolute;
+    bottom: 110px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--gray-800);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 200;
+    opacity: 0;
+    transition: all 0.3s;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* Create Form Modal */
+  .modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 60;
+    display: none;
+    align-items: flex-end;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal-sheet {
+    background: white;
+    border-radius: 20px 20px 0 0;
+    width: 100%;
+    max-height: 80%;
+    padding: 20px;
+    overflow-y: auto;
+  }
+  .modal-handle {
+    width: 40px;
+    height: 4px;
+    background: var(--gray-300);
+    border-radius: 2px;
+    margin: 0 auto 16px;
+  }
+  .modal-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin-bottom: 16px;
+  }
+
+  /* Animations */
+  @keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .card { animation: slideUp 0.3s ease-out; }
+
+  /* Info banner */
+  .info-banner {
+    position: absolute;
+    top: 50px;
+    left: 0;
+    right: 0;
+    background: #fef3c7;
+    color: #92400e;
+    font-size: 11px;
+    padding: 6px 20px;
+    text-align: center;
+    z-index: 10;
+    display: none;
+  }
+  .info-banner.show { display: block; }
+</style>
+</head>
+<body>
+
+<div class="phone-frame" id="app">
+  <div class="notch"></div>
+  <div class="status-bar">
+    <span>9:41</span>
+    <span>&#9679;&#9679;&#9679;&#9679; WiFi &#128267;</span>
+  </div>
+
+  <!-- INFO BANNER -->
+  <div class="info-banner" id="infoBanner">Interactive Preview - Demo Data</div>
+
+  <!-- ===== LOGIN SCREEN ===== -->
+  <div class="screen active" id="loginScreen" style="flex:1;display:flex;flex-direction:column;">
+    <div class="login-container">
+      <div class="login-logo">
+        <svg viewBox="0 0 24 24"><path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.18L19.18 7 12 10.82 4.82 7 12 4.18zM4 8.64l7 3.5v7.72l-7-3.5V8.64zm10 11.22V12.14l7-3.5v7.72l-7 3.5z"/></svg>
+      </div>
+      <div class="login-title">TradieFlow</div>
+      <div class="login-subtitle">Business management for tradies</div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input class="form-input" type="email" id="loginEmail" value="owner@demo.com" placeholder="you@example.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input class="form-input" type="password" id="loginPass" value="Password123!" placeholder="Enter password">
+      </div>
+      <button class="btn btn-primary" onclick="doLogin()">Sign In</button>
+      <button class="btn btn-outline" onclick="doLogin()">Register as Owner</button>
+      <div class="demo-hint">Demo: owner@demo.com / Password123!</div>
+    </div>
+  </div>
+
+  <!-- ===== MAIN APP ===== -->
+  <div id="mainApp" style="display:none;flex:1;flex-direction:column;">
+    <div class="header" id="screenHeader">
+      <span id="headerIcon">&#127968;</span>
+      <div>
+        <div id="headerTitle">Dashboard</div>
+        <div class="subtitle" id="headerSubtitle">Mike's Plumbing Co.</div>
+      </div>
+    </div>
+
+    <div class="screen-content" id="screenContent">
+      <!-- DASHBOARD -->
+      <div class="screen active" id="dashboardScreen">
+        <div class="welcome-card">
+          <h2>G'day, Mike! &#128075;</h2>
+          <p>Here's your business at a glance</p>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon" style="background:#dbeafe;">&#128736;</div>
+            <div class="stat-value">3</div>
+            <div class="stat-label">Jobs Today</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:#fef3c7;">&#9888;&#65039;</div>
+            <div class="stat-value">2</div>
+            <div class="stat-label">Overdue Invoices</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:#dcfce7;">&#128176;</div>
+            <div class="stat-value">$12,450</div>
+            <div class="stat-label">Outstanding</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:#f3e8ff;">&#128200;</div>
+            <div class="stat-value">$48,920</div>
+            <div class="stat-label">This Month</div>
+          </div>
+        </div>
+        <div class="section-title">Today's Jobs <a href="#" onclick="switchTab('jobs')">View All</a></div>
+        <div class="card" onclick="showJobDetail(0)">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Hot Water System Replacement</div>
+              <div class="card-subtitle">Sarah Johnson - 14 Elm St</div>
+            </div>
+            <span class="badge badge-blue">In Progress</span>
+          </div>
+          <div class="card-row"><span>9:00 AM - 12:00 PM</span><span>Assigned: Mike</span></div>
+        </div>
+        <div class="card" onclick="showJobDetail(1)">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Blocked Drain - Kitchen</div>
+              <div class="card-subtitle">Tom Williams - 8 Oak Ave</div>
+            </div>
+            <span class="badge badge-purple">Scheduled</span>
+          </div>
+          <div class="card-row"><span>1:00 PM - 3:00 PM</span><span>Assigned: Jake</span></div>
+        </div>
+        <div class="card" onclick="showJobDetail(2)">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Bathroom Renovation Quote</div>
+              <div class="card-subtitle">Lisa Chen - 22 Pine Rd</div>
+            </div>
+            <span class="badge badge-orange">Lead</span>
+          </div>
+          <div class="card-row"><span>3:30 PM - 4:30 PM</span><span>Assigned: Mike</span></div>
+        </div>
+        <div class="section-title" style="margin-top:20px;">Recent Invoices <a href="#" onclick="switchTab('invoices')">View All</a></div>
+        <div class="card" onclick="showInvoiceDetail(0)">
+          <div class="card-header">
+            <div>
+              <div class="card-title">INV-000012</div>
+              <div class="card-subtitle">Sarah Johnson</div>
+            </div>
+            <span class="badge badge-red">Overdue</span>
+          </div>
+          <div class="card-row"><span>Due: 15 Feb 2026</span><span class="card-amount">$2,850.00</span></div>
+        </div>
+      </div>
+
+      <!-- JOBS -->
+      <div class="screen" id="jobsScreen">
+        <div class="search-bar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input placeholder="Search jobs..." oninput="filterJobs(this.value)">
+        </div>
+        <div class="filter-row">
+          <div class="chip active" onclick="filterJobStatus(this,'all')">All</div>
+          <div class="chip" onclick="filterJobStatus(this,'lead')">Lead</div>
+          <div class="chip" onclick="filterJobStatus(this,'scheduled')">Scheduled</div>
+          <div class="chip" onclick="filterJobStatus(this,'in_progress')">In Progress</div>
+          <div class="chip" onclick="filterJobStatus(this,'completed')">Completed</div>
+          <div class="chip" onclick="filterJobStatus(this,'invoiced')">Invoiced</div>
+        </div>
+        <div id="jobsList"></div>
+      </div>
+
+      <!-- CUSTOMERS -->
+      <div class="screen" id="customersScreen">
+        <div class="search-bar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input placeholder="Search customers..." oninput="filterCustomers(this.value)">
+        </div>
+        <div id="customersList"></div>
+      </div>
+
+      <!-- INVOICES -->
+      <div class="screen" id="invoicesScreen">
+        <div class="filter-row">
+          <div class="chip active" onclick="filterInvStatus(this,'all')">All</div>
+          <div class="chip" onclick="filterInvStatus(this,'draft')">Draft</div>
+          <div class="chip" onclick="filterInvStatus(this,'sent')">Sent</div>
+          <div class="chip" onclick="filterInvStatus(this,'overdue')">Overdue</div>
+          <div class="chip" onclick="filterInvStatus(this,'paid')">Paid</div>
+        </div>
+        <div id="invoicesList"></div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="screen" id="settingsScreen">
+        <div class="card" style="cursor:default;">
+          <div class="customer-item">
+            <div class="avatar" style="background:var(--primary);width:50px;height:50px;font-size:20px;">MR</div>
+            <div>
+              <div class="card-title">Mike Robinson</div>
+              <div class="card-subtitle">owner@demo.com</div>
+              <div class="card-subtitle" style="margin-top:2px;"><span class="badge badge-blue" style="font-size:10px;">OWNER</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="settings-group">
+          <div class="settings-item" onclick="showToast('Business settings opened')">
+            <div class="si-left">
+              <div class="si-icon" style="background:#dbeafe;">&#127970;</div>
+              <span class="si-label">Business Details</span>
+            </div>
+            <span class="si-arrow">&#8250;</span>
+          </div>
+          <div class="settings-item" onclick="switchTab('staff')">
+            <div class="si-left">
+              <div class="si-icon" style="background:#dcfce7;">&#128101;</div>
+              <span class="si-label">Staff Management</span>
+            </div>
+            <span class="si-arrow">&#8250;</span>
+          </div>
+          <div class="settings-item" onclick="showToast('GST settings: 10%')">
+            <div class="si-left">
+              <div class="si-icon" style="background:#fef3c7;">&#128178;</div>
+              <span class="si-label">GST & Tax Settings</span>
+            </div>
+            <span class="si-arrow">&#8250;</span>
+          </div>
+          <div class="settings-item" onclick="showToast('Export started')">
+            <div class="si-left">
+              <div class="si-icon" style="background:#f3e8ff;">&#128202;</div>
+              <span class="si-label">BAS Export</span>
+            </div>
+            <span class="si-arrow">&#8250;</span>
+          </div>
+        </div>
+        <div class="settings-group">
+          <div class="settings-item" onclick="showToast('Notifications settings')">
+            <div class="si-left">
+              <div class="si-icon" style="background:#e0e7ff;">&#128276;</div>
+              <span class="si-label">Notifications</span>
+            </div>
+            <span class="si-arrow">&#8250;</span>
+          </div>
+          <div class="settings-item" onclick="showToast('Help & Support')">
+            <div class="si-left">
+              <div class="si-icon" style="background:#e0e7ff;">&#10067;</div>
+              <span class="si-label">Help & Support</span>
+            </div>
+            <span class="si-arrow">&#8250;</span>
+          </div>
+        </div>
+        <div class="settings-group">
+          <div class="settings-item danger" onclick="doLogout()">
+            <div class="si-left">
+              <div class="si-icon" style="background:#fee2e2;">&#128682;</div>
+              <span class="si-label">Sign Out</span>
+            </div>
+            <span class="si-arrow">&#8250;</span>
+          </div>
+        </div>
+        <div style="text-align:center;margin-top:20px;font-size:12px;color:var(--gray-400);">
+          TradieFlow v1.0.0<br>ABN: 12 345 678 901
+        </div>
+      </div>
+    </div>
+
+    <!-- FAB -->
+    <button class="fab" id="fab" onclick="showCreateModal()">+</button>
+
+    <!-- TAB BAR -->
+    <div class="tab-bar">
+      <button class="tab-item active" onclick="switchTab('dashboard')" data-tab="dashboard">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+        Home
+      </button>
+      <button class="tab-item" onclick="switchTab('jobs')" data-tab="jobs">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-4V4c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v2H4c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6 0h-4V4h4v2z"/></svg>
+        Jobs
+      </button>
+      <button class="tab-item" onclick="switchTab('customers')" data-tab="customers">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+        Clients
+      </button>
+      <button class="tab-item" onclick="switchTab('invoices')" data-tab="invoices">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 9h-2v2H9v-2H7v-2h2V7h2v2h2v2zm-1-7.5L17.5 9H12V3.5z"/></svg>
+        Invoices
+      </button>
+      <button class="tab-item" onclick="switchTab('settings')" data-tab="settings">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+        Settings
+      </button>
+    </div>
+  </div>
+
+  <!-- DETAIL OVERLAY -->
+  <div class="detail-overlay" id="detailOverlay">
+    <div class="detail-header">
+      <button class="back-btn" onclick="closeDetail()">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+      </button>
+      <h2 id="detailTitle">Detail</h2>
+    </div>
+    <div class="detail-body" id="detailBody"></div>
+  </div>
+
+  <!-- CREATE MODAL -->
+  <div class="modal-overlay" id="createModal" onclick="closeCreateModal(event)">
+    <div class="modal-sheet" onclick="event.stopPropagation()">
+      <div class="modal-handle"></div>
+      <div class="modal-title" id="modalTitle">Create New</div>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+// ===== DATA =====
+const jobs = [
+  { id:1, title:'Hot Water System Replacement', customer:'Sarah Johnson', address:'14 Elm St, Richmond', status:'in_progress', assignee:'Mike', time:'9:00 AM - 12:00 PM', date:'4 Mar 2026', statusColor:'badge-blue', notes:['Checked existing unit - 25L Rheem, needs full replacement','Customer approved Rinnai B26 continuous flow'], photos:2 },
+  { id:2, title:'Blocked Drain - Kitchen', customer:'Tom Williams', address:'8 Oak Ave, Hawthorn', status:'scheduled', assignee:'Jake', time:'1:00 PM - 3:00 PM', date:'4 Mar 2026', statusColor:'badge-purple', notes:['Initial phone assessment - likely grease buildup'], photos:0 },
+  { id:3, title:'Bathroom Renovation Quote', customer:'Lisa Chen', address:'22 Pine Rd, Kew', status:'lead', assignee:'Mike', time:'3:30 PM - 4:30 PM', date:'4 Mar 2026', statusColor:'badge-orange', notes:[], photos:0 },
+  { id:4, title:'Leaking Tap - Laundry', customer:'David Brown', address:'5 Maple Ct, Balwyn', status:'completed', assignee:'Jake', time:'8:00 AM - 9:00 AM', date:'3 Mar 2026', statusColor:'badge-green', notes:['Replaced washer and ceramic disc','Old Caroma mixer - parts from Reece'], photos:3 },
+  { id:5, title:'Gas Fitting Certificate', customer:'Emma Wilson', address:'31 Birch Ln, Camberwell', status:'invoiced', assignee:'Mike', time:'10:00 AM - 11:30 AM', date:'2 Mar 2026', statusColor:'badge-gray', notes:['Type A appliance servicing','Compliance certificate issued'], photos:1 },
+  { id:6, title:'Stormwater Drainage Install', customer:'James Taylor', address:'9 Cedar Dr, Doncaster', status:'quoted', assignee:'Mike', time:'All Day', date:'28 Feb 2026', statusColor:'badge-purple', notes:['Site inspection done','Quote Q-000008 sent to customer'], photos:4 },
+];
+const customers = [
+  { id:1, name:'Sarah Johnson', email:'sarah@email.com', phone:'0412 345 678', address:'14 Elm St, Richmond VIC 3121', jobs:3, color:'#2563eb' },
+  { id:2, name:'Tom Williams', email:'tom@email.com', phone:'0423 456 789', address:'8 Oak Ave, Hawthorn VIC 3122', jobs:1, color:'#7c3aed' },
+  { id:3, name:'Lisa Chen', email:'lisa@email.com', phone:'0434 567 890', address:'22 Pine Rd, Kew VIC 3101', jobs:2, color:'#db2777' },
+  { id:4, name:'David Brown', email:'david@email.com', phone:'0445 678 901', address:'5 Maple Ct, Balwyn VIC 3103', jobs:5, color:'#ea580c' },
+  { id:5, name:'Emma Wilson', email:'emma@email.com', phone:'0456 789 012', address:'31 Birch Ln, Camberwell VIC 3124', jobs:2, color:'#16a34a' },
+  { id:6, name:'James Taylor', email:'james@email.com', phone:'0467 890 123', address:'9 Cedar Dr, Doncaster VIC 3108', jobs:1, color:'#0891b2' },
+  { id:7, name:'Rachel Kim', email:'rachel@email.com', phone:'0478 901 234', address:'17 Wattle St, Box Hill VIC 3128', jobs:4, color:'#6d28d9' },
+];
+const invoices = [
+  { id:1, number:'INV-000012', customer:'Sarah Johnson', status:'overdue', statusColor:'badge-red', due:'15 Feb 2026', amount:2850.00, items:[{desc:'Hot Water Unit - Rinnai B26',qty:1,price:1890},{desc:'Installation Labour',qty:4,price:120},{desc:'Pipe fittings & sundries',qty:1,price:185}] },
+  { id:2, number:'INV-000011', customer:'David Brown', status:'sent', statusColor:'badge-blue', due:'10 Mar 2026', amount:385.00, items:[{desc:'Tap washer replacement',qty:1,price:45},{desc:'Ceramic disc cartridge',qty:1,price:95},{desc:'Labour',qty:1.5,price:120},{desc:'Call out fee',qty:1,price:65}] },
+  { id:3, number:'INV-000010', customer:'Emma Wilson', status:'paid', statusColor:'badge-green', due:'28 Feb 2026', amount:650.00, items:[{desc:'Gas fitting inspection',qty:1,price:350},{desc:'Compliance certificate',qty:1,price:120},{desc:'Labour',qty:1.5,price:120}] },
+  { id:4, number:'INV-000009', customer:'Rachel Kim', status:'paid', statusColor:'badge-green', due:'20 Feb 2026', amount:4200.00, items:[{desc:'Bathroom plumbing rough-in',qty:1,price:2800},{desc:'Fixtures installation',qty:1,price:950},{desc:'Materials',qty:1,price:450}] },
+  { id:5, number:'INV-000008', customer:'Sarah Johnson', status:'overdue', statusColor:'badge-red', due:'1 Feb 2026', amount:1575.00, items:[{desc:'Emergency callout - burst pipe',qty:1,price:250},{desc:'Pipe repair & replacement',qty:1,price:680},{desc:'Labour',qty:4,price:120},{desc:'After hours surcharge',qty:1,price:165}] },
+  { id:6, number:'INV-000007', customer:'Tom Williams', status:'draft', statusColor:'badge-gray', due:'15 Mar 2026', amount:920.00, items:[{desc:'Drain clearing - high pressure jet',qty:1,price:450},{desc:'CCTV inspection',qty:1,price:280},{desc:'Labour',qty:1.5,price:120}] },
+];
+
+const statusFlow = ['lead','quoted','scheduled','in_progress','completed','invoiced','paid'];
+
+// ===== APP LOGIC =====
+function doLogin() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('mainApp').style.display = 'flex';
+  document.getElementById('infoBanner').classList.add('show');
+  setTimeout(()=> document.getElementById('infoBanner').classList.remove('show'), 3000);
+  renderJobs(); renderCustomers(); renderInvoices();
+}
+function doLogout() {
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('mainApp').style.display = 'none';
+  switchTab('dashboard');
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const tabBtn = document.querySelector(`[data-tab="${tab}"]`);
+  if(tabBtn) tabBtn.classList.add('active');
+  const screenId = tab + 'Screen';
+  const screen = document.getElementById(screenId);
+  if(screen) screen.classList.add('active');
+  const titles = {dashboard:'Dashboard',jobs:'Jobs',customers:'Clients',invoices:'Invoices',settings:'Settings'};
+  const icons = {dashboard:'&#127968;',jobs:'&#128736;',customers:'&#128101;',invoices:'&#128196;',settings:'&#9881;&#65039;'};
+  document.getElementById('headerTitle').textContent = titles[tab]||tab;
+  document.getElementById('headerIcon').innerHTML = icons[tab]||'';
+  document.getElementById('fab').style.display = (tab==='settings'||tab==='dashboard')?'none':'flex';
+}
+
+// JOBS
+function renderJobs(filter='all', search='') {
+  const list = document.getElementById('jobsList');
+  let filtered = jobs;
+  if(filter!=='all') filtered = filtered.filter(j=>j.status===filter);
+  if(search) filtered = filtered.filter(j=>j.title.toLowerCase().includes(search)||j.customer.toLowerCase().includes(search));
+  list.innerHTML = filtered.map((j,i)=>`
+    <div class="card" onclick="showJobDetail(${jobs.indexOf(j)})" style="animation-delay:${i*0.05}s">
+      <div class="card-header">
+        <div><div class="card-title">${j.title}</div><div class="card-subtitle">${j.customer} - ${j.address.split(',')[0]}</div></div>
+        <span class="badge ${j.statusColor}">${j.status.replace('_',' ')}</span>
+      </div>
+      <div class="card-row"><span>${j.date} | ${j.time}</span><span>${j.assignee}</span></div>
+    </div>
+  `).join('');
+  if(!filtered.length) list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray-400);">No jobs found</div>';
+}
+function filterJobs(v) { renderJobs(currentJobFilter, v.toLowerCase()); }
+let currentJobFilter = 'all';
+function filterJobStatus(el, status) {
+  currentJobFilter = status;
+  document.querySelectorAll('#jobsScreen .chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  renderJobs(status);
+}
+
+// CUSTOMERS
+function renderCustomers(search='') {
+  const list = document.getElementById('customersList');
+  let filtered = customers;
+  if(search) filtered = filtered.filter(c=>c.name.toLowerCase().includes(search)||c.email.toLowerCase().includes(search));
+  list.innerHTML = filtered.map((c,i)=>`
+    <div class="card" onclick="showCustomerDetail(${customers.indexOf(c)})" style="animation-delay:${i*0.05}s">
+      <div class="customer-item">
+        <div class="avatar" style="background:${c.color}">${c.name.split(' ').map(n=>n[0]).join('')}</div>
+        <div style="flex:1">
+          <div class="card-title">${c.name}</div>
+          <div class="card-subtitle">${c.email} | ${c.phone}</div>
+        </div>
+        <span style="font-size:12px;color:var(--gray-400)">${c.jobs} jobs</span>
+      </div>
+    </div>
+  `).join('');
+}
+function filterCustomers(v) { renderCustomers(v.toLowerCase()); }
+
+// INVOICES
+function renderInvoices(filter='all') {
+  const list = document.getElementById('invoicesList');
+  let filtered = invoices;
+  if(filter!=='all') filtered = filtered.filter(i=>i.status===filter);
+  list.innerHTML = filtered.map((inv,i)=>`
+    <div class="card" onclick="showInvoiceDetail(${invoices.indexOf(inv)})" style="animation-delay:${i*0.05}s">
+      <div class="card-header">
+        <div><div class="card-title">${inv.number}</div><div class="card-subtitle">${inv.customer}</div></div>
+        <span class="badge ${inv.statusColor}">${inv.status}</span>
+      </div>
+      <div class="card-row"><span>Due: ${inv.due}</span><span class="card-amount">$${inv.amount.toLocaleString('en-AU',{minimumFractionDigits:2})}</span></div>
+    </div>
+  `).join('');
+  if(!filtered.length) list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray-400);">No invoices found</div>';
+}
+function filterInvStatus(el, status) {
+  document.querySelectorAll('#invoicesScreen .chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  renderInvoices(status);
+}
+
+// DETAIL VIEWS
+function showJobDetail(idx) {
+  const j = jobs[idx];
+  document.getElementById('detailTitle').textContent = 'Job Details';
+  const currentIdx = statusFlow.indexOf(j.status);
+  document.getElementById('detailBody').innerHTML = `
+    <div class="detail-section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <h2 style="font-size:18px;font-weight:700;color:var(--gray-900)">${j.title}</h2>
+        <span class="badge ${j.statusColor}" style="font-size:12px">${j.status.replace('_',' ')}</span>
+      </div>
+    </div>
+    <div class="detail-section">
+      <h3>Job Information</h3>
+      <div class="detail-field"><span class="label">Customer</span><span class="value">${j.customer}</span></div>
+      <div class="detail-field"><span class="label">Address</span><span class="value">${j.address}</span></div>
+      <div class="detail-field"><span class="label">Date</span><span class="value">${j.date}</span></div>
+      <div class="detail-field"><span class="label">Time</span><span class="value">${j.time}</span></div>
+      <div class="detail-field"><span class="label">Assigned To</span><span class="value">${j.assignee}</span></div>
+      <div class="detail-field"><span class="label">Photos</span><span class="value">${j.photos} attached</span></div>
+    </div>
+    <div class="detail-section">
+      <h3>Status Progression</h3>
+      <div class="status-timeline">
+        ${statusFlow.map((s,i)=>`
+          <div class="timeline-item ${i<currentIdx?'done':''} ${i===currentIdx?'current':''}">
+            <div class="tl-label">${s.replace('_',' ').replace(/\b\w/g,l=>l.toUpperCase())}</div>
+            ${i<=currentIdx?'<div class="tl-date">'+j.date+'</div>':''}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    ${j.notes.length ? `
+    <div class="detail-section">
+      <h3>Notes (${j.notes.length})</h3>
+      ${j.notes.map(n=>`<div class="note-card">${n}<div class="note-meta">${j.assignee} - ${j.date}</div></div>`).join('')}
+    </div>` : ''}
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      ${currentIdx < statusFlow.length-1 ? `<button class="btn btn-primary btn-sm" style="flex:1" onclick="advanceJobStatus(${idx})">Advance to ${statusFlow[currentIdx+1].replace('_',' ').replace(/\\b\\w/g,l=>l.toUpperCase())}</button>` : ''}
+      <button class="btn btn-outline btn-sm" style="flex:1" onclick="showToast('Note added');closeDetail()">Add Note</button>
+    </div>
+  `;
+  document.getElementById('detailOverlay').classList.add('active');
+}
+
+function advanceJobStatus(idx) {
+  const j = jobs[idx];
+  const ci = statusFlow.indexOf(j.status);
+  if(ci < statusFlow.length-1) {
+    j.status = statusFlow[ci+1];
+    const colors = {lead:'badge-orange',quoted:'badge-purple',scheduled:'badge-purple',in_progress:'badge-blue',completed:'badge-green',invoiced:'badge-gray',paid:'badge-green'};
+    j.statusColor = colors[j.status];
+    showToast('Status: ' + j.status.replace('_',' '));
+    showJobDetail(idx);
+    renderJobs();
+  }
+}
+
+function showCustomerDetail(idx) {
+  const c = customers[idx];
+  document.getElementById('detailTitle').textContent = 'Customer Details';
+  const custJobs = jobs.filter(j=>j.customer===c.name);
+  document.getElementById('detailBody').innerHTML = `
+    <div style="text-align:center;padding:20px 0;">
+      <div class="avatar" style="background:${c.color};width:64px;height:64px;font-size:24px;margin:0 auto 12px;">${c.name.split(' ').map(n=>n[0]).join('')}</div>
+      <h2 style="font-size:20px;font-weight:700;color:var(--gray-900)">${c.name}</h2>
+    </div>
+    <div class="detail-section">
+      <h3>Contact Information</h3>
+      <div class="detail-field"><span class="label">Email</span><span class="value">${c.email}</span></div>
+      <div class="detail-field"><span class="label">Phone</span><span class="value">${c.phone}</span></div>
+      <div class="detail-field"><span class="label">Address</span><span class="value">${c.address}</span></div>
+      <div class="detail-field"><span class="label">Total Jobs</span><span class="value">${c.jobs}</span></div>
+    </div>
+    ${custJobs.length ? `
+    <div class="detail-section">
+      <h3>Recent Jobs</h3>
+      ${custJobs.map(j=>`
+        <div class="card" style="cursor:default;margin-bottom:8px;">
+          <div class="card-header">
+            <div class="card-title" style="font-size:14px">${j.title}</div>
+            <span class="badge ${j.statusColor}" style="font-size:10px">${j.status.replace('_',' ')}</span>
+          </div>
+        </div>
+      `).join('')}
+    </div>` : ''}
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button class="btn btn-primary btn-sm" style="flex:1" onclick="showToast('Creating job for ${c.name}');closeDetail()">New Job</button>
+      <button class="btn btn-outline btn-sm" style="flex:1" onclick="showToast('Creating quote');closeDetail()">New Quote</button>
+    </div>
+  `;
+  document.getElementById('detailOverlay').classList.add('active');
+}
+
+function showInvoiceDetail(idx) {
+  const inv = invoices[idx];
+  const gstRate = 0.10;
+  const subtotal = inv.items.reduce((s,i)=>s+(i.qty*i.price),0);
+  const gst = subtotal * gstRate;
+  const total = subtotal + gst;
+  document.getElementById('detailTitle').textContent = inv.number;
+  document.getElementById('detailBody').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div>
+        <h2 style="font-size:20px;font-weight:700;color:var(--gray-900)">${inv.number}</h2>
+        <div style="font-size:13px;color:var(--gray-500);margin-top:2px">${inv.customer}</div>
+      </div>
+      <span class="badge ${inv.statusColor}" style="font-size:12px">${inv.status}</span>
+    </div>
+    <div class="detail-section">
+      <h3>Invoice Details</h3>
+      <div class="detail-field"><span class="label">Due Date</span><span class="value">${inv.due}</span></div>
+      <div class="detail-field"><span class="label">Status</span><span class="value">${inv.status.toUpperCase()}</span></div>
+    </div>
+    <div class="detail-section">
+      <h3>Line Items</h3>
+      ${inv.items.map(i=>`
+        <div class="line-item">
+          <div><div class="li-desc">${i.desc}</div><div class="li-qty">${i.qty} x $${i.price.toFixed(2)}</div></div>
+          <div class="li-total">$${(i.qty*i.price).toFixed(2)}</div>
+        </div>
+      `).join('')}
+      <div class="total-row"><span>Subtotal</span><span>$${subtotal.toFixed(2)}</span></div>
+      <div class="total-row"><span>GST (10%)</span><span>$${gst.toFixed(2)}</span></div>
+      <div class="total-row grand"><span>Total</span><span>$${total.toFixed(2)}</span></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      ${inv.status==='draft'?`<button class="btn btn-primary btn-sm" style="flex:1" onclick="invoiceAction(${idx},'sent')">Send Invoice</button>`:''}
+      ${inv.status==='sent'||inv.status==='overdue'?`<button class="btn btn-primary btn-sm" style="flex:1" onclick="invoiceAction(${idx},'paid')">Mark Paid</button>`:''}
+      ${inv.status!=='paid'&&inv.status!=='void'?`<button class="btn btn-outline btn-sm" style="flex:1" onclick="invoiceAction(${idx},'void')">Void</button>`:''}
+      ${inv.status==='paid'?`<div style="text-align:center;width:100%;padding:12px;color:var(--success);font-weight:600;">&#10003; Payment Received</div>`:''}
+    </div>
+  `;
+  document.getElementById('detailOverlay').classList.add('active');
+}
+
+function invoiceAction(idx, newStatus) {
+  const inv = invoices[idx];
+  inv.status = newStatus;
+  const colors = {draft:'badge-gray',sent:'badge-blue',overdue:'badge-red',paid:'badge-green',void:'badge-gray'};
+  inv.statusColor = colors[newStatus];
+  showToast('Invoice ' + newStatus);
+  showInvoiceDetail(idx);
+  renderInvoices();
+}
+
+function closeDetail() {
+  document.getElementById('detailOverlay').classList.remove('active');
+}
+
+// CREATE MODAL
+function showCreateModal() {
+  const activeTab = document.querySelector('.tab-item.active')?.dataset.tab;
+  const modal = document.getElementById('createModal');
+  let title = 'Create New';
+  let body = '';
+  if(activeTab === 'jobs') {
+    title = 'New Job';
+    body = `
+      <div class="form-group"><label class="form-label">Job Title</label><input class="form-input" placeholder="e.g. Leaking Tap Repair"></div>
+      <div class="form-group"><label class="form-label">Customer</label><select class="form-input">${customers.map(c=>`<option>${c.name}</option>`).join('')}</select></div>
+      <div class="form-group"><label class="form-label">Site Address</label><input class="form-input" placeholder="Street address"></div>
+      <div class="form-group"><label class="form-label">Description</label><textarea class="form-input" rows="3" placeholder="Job details..."></textarea></div>
+      <div class="form-group"><label class="form-label">Assign To</label><select class="form-input"><option>Mike</option><option>Jake</option></select></div>
+      <button class="btn btn-primary" onclick="createJob()">Create Job</button>
+    `;
+  } else if(activeTab === 'customers') {
+    title = 'New Customer';
+    body = `
+      <div class="form-group"><label class="form-label">Full Name</label><input class="form-input" id="newCustName" placeholder="John Smith"></div>
+      <div class="form-group"><label class="form-label">Email</label><input class="form-input" type="email" placeholder="john@example.com"></div>
+      <div class="form-group"><label class="form-label">Phone</label><input class="form-input" type="tel" placeholder="0400 000 000"></div>
+      <div class="form-group"><label class="form-label">Address</label><input class="form-input" placeholder="Street address"></div>
+      <button class="btn btn-primary" onclick="createCustomer()">Add Customer</button>
+    `;
+  } else if(activeTab === 'invoices') {
+    title = 'New Invoice';
+    body = `
+      <div class="form-group"><label class="form-label">Customer</label><select class="form-input">${customers.map(c=>`<option>${c.name}</option>`).join('')}</select></div>
+      <div class="form-group"><label class="form-label">Due Date</label><input class="form-input" type="date"></div>
+      <div class="form-group"><label class="form-label">Description</label><input class="form-input" placeholder="Line item description"></div>
+      <div class="form-group"><label class="form-label">Amount</label><input class="form-input" type="number" placeholder="0.00"></div>
+      <button class="btn btn-primary" onclick="createInvoice()">Create Invoice</button>
+    `;
+  }
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalBody').innerHTML = body;
+  modal.classList.add('active');
+}
+function closeCreateModal(e) {
+  if(e.target === document.getElementById('createModal')) {
+    document.getElementById('createModal').classList.remove('active');
+  }
+}
+function createJob() {
+  showToast('Job created successfully');
+  document.getElementById('createModal').classList.remove('active');
+}
+function createCustomer() {
+  showToast('Customer added');
+  document.getElementById('createModal').classList.remove('active');
+}
+function createInvoice() {
+  showToast('Invoice created');
+  document.getElementById('createModal').classList.remove('active');
+}
+
+// TOAST
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2500);
+}
+</script>
+</body>
+</html>
